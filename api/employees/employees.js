@@ -24,25 +24,6 @@ employeesRouter.param('employeeId', (req, res, next, employeeId) => {
   );
 });
 
-employeesRouter.use('/', (req, res, next) => {
-  if (req.body.employee) {
-    const newEmployee = {
-      ...req.body.employee,
-      isCurrentEmployee: req.body.employee.isCurrentEmployee === 0 ? 0 : 1
-    };
-    if (
-      !newEmployee.name
-      || !newEmployee.position
-      || !newEmployee.wage
-    ) {
-      return res.sendStatus(400);
-    }
-    req.newEmployee = newEmployee;
-    next();
-  }
-  next();
-});
-
 employeesRouter.use('/:employeeId', employeeRouter);
 
 employeesRouter.get('/', (req, res, next) => {
@@ -60,6 +41,17 @@ employeesRouter.get('/', (req, res, next) => {
 });
 
 employeesRouter.post('/', (req, res, next) => {
+  const newEmployee = {
+    ...req.body.employee,
+    isCurrentEmployee: req.body.employee.isCurrentEmployee === 0 ? 0 : 1
+  };
+  if (
+    !newEmployee.name
+    || !newEmployee.position
+    || !newEmployee.wage
+  ) {
+    return res.sendStatus(400);
+  }
   db.run(
     `INSERT INTO Employee (
       name,
@@ -73,21 +65,21 @@ employeesRouter.post('/', (req, res, next) => {
       $isCurrentEmployee
     )`,
     {
-      $name: req.newEmployee.name,
-      $position: req.newEmployee.position,
-      $wage: req.newEmployee.wage,
-      $isCurrentEmployee: req.newEmployee.isCurrentEmployee
+      $name: newEmployee.name,
+      $position: newEmployee.position,
+      $wage: newEmployee.wage,
+      $isCurrentEmployee: newEmployee.isCurrentEmployee
     },
-    (err) => {
+    function(err) {
       if (err) {
         return next(err);
       }
       db.get(
         `SELECT *
         FROM Employee
-        WHERE name = $name`,
+        WHERE id = $employeeId`,
         {
-          $name: newEmployee.name
+          $employeeId: this.lastID
         },
         (err, employee) => {
           if (err) {
